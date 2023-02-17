@@ -3,19 +3,19 @@
 ' -------------------------------------------------- '
 
 '[ Setup
-Dim n = 100  'number of parts / datasets
-Dim n_min = 1
+Dim n = 100          'number of parts / datasets
+Dim n_min = 2
 Dim n_max = 100
-Dim r = 4    'number of 1st row
-Dim c = 8    'number of columns !!
-Dim f = 1000 'convert data to mm for vectors
+Dim r = 4            'number of 1st row
+Dim c = 8            'number of columns !!
+Dim f = 1000         'convert data to mm for vectors
 Dim name_bks(n), name_dir(n), position_bks(n), position_dir(n), name_sklt(n)
 Dim x_red = GoExcel.CellValue("3rd Party:data", "data", "R" & 1) 'reduced number space
 Dim y_red = GoExcel.CellValue("3rd Party:data", "data", "S" & 1)
 Dim z_red = GoExcel.CellValue("3rd Party:data", "data", "T" & 1)
 Dim nr(n), typ(n), xe(n), yn(n), zz(n), xd(n), yd(n), a(n), switch(n)
 Dim tempX(n), tempY(n)
-Dim hp_sp(n), hf(n), δ(n), ε(n), lmr(n)
+Dim hp_sp(n), hf(n), δ(n), ε(n), lmr(n), hp(n), α(n)
 Logger.Info("Datasets: " & n)
 ']
 
@@ -34,6 +34,9 @@ For i = n_min - 1 To n_max - 1 'Load data from excel an safe it in an array
 	δ(i)      =  GoExcel.CellValue("3rd Party:data", "data", "L" & i + r)              'Versatz Gleisachse
 	ε(i)      =  GoExcel.CellValue("3rd Party:data", "data", "M" & i + r)              'Versatz Fahrzeugachse
 	lmr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "X" & i + r)              'Aufhängung Links, Mitte oder Rechts des Gleises
+	hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G" & i + r)              'Höhe zwischen Tragseil und Gleis
+	α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "K" & i + r)              'Neigung Gleisachse
+	
 	
 	If (switch(i) = "true") 'Switch bks and dir
 		tempX(i) = xd(i)
@@ -92,23 +95,23 @@ For i = n_min - 1 To n_max - 1
     Dim oOcc As ComponentOccurrence
 	
 	If (typ(i) = "Typ10")
-		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt-A.iam", oMatrix)
+		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt.iam", oMatrix)
 		name_sklt(i) = i + 1 & "-sklt-Typ10:" & nr(i)
 		oOcc.Name = name_sklt(i)
 	Else If (typ(i) = "Typ21")
-		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt-A.iam", oMatrix)
+		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt.iam", oMatrix)
 		name_sklt(i) = i + 1 & "-sklt-Typ21:" & nr(i)
 		oOcc.Name = name_sklt(i)
 	Else If (typ(i) = "Typ31")			
-		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt-A.iam", oMatrix)
+		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt.iam", oMatrix)
 		name_sklt(i) = i + 1 & "-sklt-Typ31:" & nr(i)
 		oOcc.Name = name_sklt(i)
 	Else If (typ(i) = "Typ82")				
-		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt-A.iam", oMatrix)
+		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt.iam", oMatrix)
 		name_sklt(i) = i + 1 & "-sklt-Typ82:" & nr(i)
 		oOcc.Name = name_sklt(i)
 	Else
-		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt-A.iam", oMatrix)
+		oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\sklt.iam", oMatrix)
 		name_sklt(i) = i + 1 & "-sklt-Andere:" & nr(i)
 		oOcc.Name = name_sklt(i)		
 	End If
@@ -122,30 +125,42 @@ Next
 
 '[ Set constraints
 For i = n_min - 1 To n_max - 1
-	Constraints.AddMate("soll" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-A-dir:1"}, "Z-Achse",
+	Constraints.AddMate("soll" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-dir:1"}, "Z-Achse",
 	    offset := 0.0, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 	    solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 	    biasPoint1 := Nothing, biasPoint2 := Nothing)
 	
-	Constraints.AddFlush("hf" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-A-hf:1" }, "XY-Ebene",
+	Constraints.AddFlush("hf" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-hf:1" }, "XY-Ebene",
 		offset := hf(i), biasPoint1 := Nothing, biasPoint2 := Nothing)
 	
-	Constraints.AddMate("δ" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-A-delta:1" }, "YZ-Ebene",
-		offset := δ(i) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
-		solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
-		biasPoint1 := Nothing, biasPoint2 := Nothing)
-	
 	If (lmr(i) = "R")
-		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-A-epsilon:1" }, "YZ-Ebene",
+		Constraints.AddMate("δ" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-delta:1" }, "YZ-Ebene",
+			offset := δ(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+			biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
 			offset := ε(i) + δ(i) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 			biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Constraints.AddAngle("α" & i + 1, name_bks(i).ToString, "Z-Achse", {name_sklt(i), "lichtraumprofil:1" }, "Z-Achse",
+			angle := α(i) * 180 / PI * -1, solutionType := AngleConstraintSolutionTypeEnum.kDirectedSolution, 
+            refVecComponent := Nothing, refEntityName := Nothing, biasPoint1 := Nothing, biasPoint2 := Nothing)
 	Else
-		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-A-epsilon:1" }, "YZ-Ebene",
+		Constraints.AddMate("δ" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-delta:1" }, "YZ-Ebene",
+			offset := δ(i) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+			biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
 			offset := (ε(i) + δ(i) * -1) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 			biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Constraints.AddAngle("α" & i + 1, name_bks(i).ToString, "Z-Achse", {name_sklt(i), "lichtraumprofil:1" }, "Z-Achse",
+			angle := α(i) * 180 / PI, solutionType := AngleConstraintSolutionTypeEnum.kDirectedSolution, 
+            refVecComponent := Nothing, refEntityName := Nothing, biasPoint1 := Nothing, biasPoint2 := Nothing)
 	End If
+	
+	Constraints.AddFlush("hp" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-hp:1" }, "XY-Ebene",
+		offset := hp(i), biasPoint1 := Nothing, biasPoint2 := Nothing)
 Next	
 ']
 
