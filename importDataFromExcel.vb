@@ -37,7 +37,6 @@ For i = n_min - 1 To n_max - 1 'Load data from excel an safe it in an array
 	hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G" & i + r)              'Höhe zwischen Tragseil und Gleis
 	α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "K" & i + r)              'Neigung Gleisachse
 	
-	
 	If (switch(i) = "true") 'Switch bks and dir
 		tempX(i) = xd(i)
 		tempY(i) = yd(i)
@@ -129,41 +128,58 @@ For i = n_min - 1 To n_max - 1
 	    offset := 0.0, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 	    solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 	    biasPoint1 := Nothing, biasPoint2 := Nothing)
-	
 	Constraints.AddFlush("hf" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-hf:1" }, "XY-Ebene",
 		offset := hf(i), biasPoint1 := Nothing, biasPoint2 := Nothing)
-	
 	If (lmr(i) = "R")
 		Constraints.AddMate("δ" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-delta:1" }, "YZ-Ebene",
 			offset := δ(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 			biasPoint1 := Nothing, biasPoint2 := Nothing)
-		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
-			offset := ε(i) + δ(i) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
-			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
-			biasPoint1 := Nothing, biasPoint2 := Nothing)
 		Constraints.AddAngle("α" & i + 1, name_bks(i).ToString, "Z-Achse", {name_sklt(i), "lichtraumprofil:1" }, "Z-Achse",
 			angle := α(i) * 180 / PI * -1, solutionType := AngleConstraintSolutionTypeEnum.kDirectedSolution, 
             refVecComponent := Nothing, refEntityName := Nothing, biasPoint1 := Nothing, biasPoint2 := Nothing)
+		If (α(i) < 0) 'R & α(i) < 0
+			Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
+				offset := δ(i) + ε(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+				solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+				biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Else 'R & α(i) >= 0
+			If (ε(i) >= 0)
+				Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
+					offset := δ(i) + ε(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+					solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+					biasPoint1 := Nothing, biasPoint2 := Nothing)
+			Else
+				Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
+					offset := δ(i) * -1 - ε(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+					solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+					biasPoint1 := Nothing, biasPoint2 := Nothing)
+			End If
+		End If
 	Else
 		Constraints.AddMate("δ" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-delta:1" }, "YZ-Ebene",
 			offset := δ(i) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
 			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
 			biasPoint1 := Nothing, biasPoint2 := Nothing)
-		Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
-			offset := (ε(i) + δ(i) * -1) * -1, e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
-			solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
-			biasPoint1 := Nothing, biasPoint2 := Nothing)
 		Constraints.AddAngle("α" & i + 1, name_bks(i).ToString, "Z-Achse", {name_sklt(i), "lichtraumprofil:1" }, "Z-Achse",
 			angle := α(i) * 180 / PI, solutionType := AngleConstraintSolutionTypeEnum.kDirectedSolution, 
             refVecComponent := Nothing, refEntityName := Nothing, biasPoint1 := Nothing, biasPoint2 := Nothing)
+		If (α(i) < 0) 'L & α(i) < 0
+			Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
+				offset := δ(i) * -1 - ε(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+				solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+				biasPoint1 := Nothing, biasPoint2 := Nothing)
+		Else 'L & α(i) >= 0
+			Constraints.AddMate("ε" & i + 1, name_dir(i).ToString, "Z-Achse", {name_sklt(i), "sklt-epsilon:1" }, "YZ-Ebene",
+				offset := δ(i) * -1 - ε(i), e1InferredType := InferredTypeEnum.kNoInference, e2InferredType := InferredTypeEnum.kNoInference,
+				solutionType := MateConstraintSolutionTypeEnum.kNoSolutionType,
+				biasPoint1 := Nothing, biasPoint2 := Nothing)
+		End If	
 	End If
-	
 	Constraints.AddFlush("hp" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-hp:1" }, "XY-Ebene",
 		offset := hp(i), biasPoint1 := Nothing, biasPoint2 := Nothing)
 Next	
 ']
-
 
 '[ End of rutine
 InventorVb.DocumentUpdate() 'Update modell if run script
