@@ -4,7 +4,7 @@
 
 '[ Setup
 Dim n = 100          'number of parts / datasets
-Dim n_min = 2
+Dim n_min = 1
 Dim n_max = 100
 Dim r = 4            'number of 1st row
 Dim c = 8            'number of columns !!
