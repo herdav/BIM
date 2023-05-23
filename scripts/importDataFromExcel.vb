@@ -1,5 +1,6 @@
 ' -------------------------------------------------- '
 ' Import data from excel and generate oriented parts '
+'   Version 23.05.2023 by David Herren @ WiVi AG
 ' -------------------------------------------------- '
 
 '[ Setup
@@ -117,7 +118,7 @@ For i = n_min - 1 To n_max - 1
 	
 	oOcc.Flexible = True
 	oOcc.Grounded = True
-	
+
 	Logger.Info(name_sklt(i))
 Next
 ']
@@ -179,6 +180,16 @@ For i = n_min - 1 To n_max - 1
 	Constraints.AddFlush("hp" & i + 1, name_dir(i).ToString, "XY-Ebene", {name_sklt(i), "sklt-hp:1" }, "XY-Ebene",
 		offset := hp(i), biasPoint1 := Nothing, biasPoint2 := Nothing)
 Next	
+']
+
+'[ Set instance values
+For i = n_min - 1 To n_max - 1
+	iProperties.InstanceValue(name_sklt(i), "name") = name_sklt(i)
+	iProperties.InstanceValue(name_sklt(i), "typ")  = typ(i)
+	iProperties.InstanceValue(name_sklt(i), "nr")   = nr(i)
+	iProperties.InstanceValue(name_sklt(i), "ε")    = ε(i)
+	iProperties.InstanceValue(name_sklt(i), "hf")   = hf(i)
+Next
 ']
 
 '[ End of rutine
