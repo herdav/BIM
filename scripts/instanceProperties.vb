@@ -16,9 +16,8 @@ Sub getInstanceProperties()
         Dim componentName As String
         componentName = occ.Name
 		
-		' Print the component name
-		Logger.Info(componentName & ": " & iProperties.InstanceValue(componentName, instanceName))
-		iProperties.InstanceValue(componentName, "iName") = componentName
+	' Print the component name
+	Logger.Info(componentName & ": " & iProperties.InstanceValue(componentName, instanceName))
     Next
 End Sub
 
@@ -34,7 +33,8 @@ Sub setInstanceProperties()
         ' Get the name of the component
         Dim componentName As String
         componentName = occ.Name
-
-		iProperties.InstanceValue(componentName, instanceName) = componentName
+		
+	' Set the component name
+	iProperties.InstanceValue(componentName, instanceName) = componentName
     Next
 End Sub
