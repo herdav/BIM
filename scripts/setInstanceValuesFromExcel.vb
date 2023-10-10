@@ -13,28 +13,52 @@ Sub Main()
 End Sub
 
 Sub LoadFDKAndSetEigenschaften()
-    Dim FDK As Dictionary(Of String, EigenschaftInfo) = LoadFDKFromExcel()
-    SetEigenschaften(FDK)
+    Dim filterValue As String = InputBox("Bitte geben Sie den FDK Objekttyp an.", "FDK Objekttyp")
+    
+    If String.IsNullOrEmpty(filterValue) Then
+        MessageBox.Show("Kein Wert eingegeben. Das Skript wird beendet.")
+        Exit Sub
+    End If
+    
+    Dim result = LoadFDKFromExcel(filterValue)
+    Dim FDK = result.Item1
+    Dim count = result.Item2
+
+    If count > 0 Then
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde in der Excel-Liste {1} Mal gefunden.", filterValue, count))
+    Else
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde in der Excel-Liste nicht gefunden.", filterValue))
+    End If
+
+    SetEigenschaften(FDK, filterValue)
 End Sub
 
-Function LoadFDKFromExcel() As Dictionary(Of String, EigenschaftInfo)
+Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of String, EigenschaftInfo), Integer)
     Dim localFDK As New Dictionary(Of String, EigenschaftInfo)()
+    Dim matchCount As Integer = 0
 
-    Dim row As Integer = 1
+    Dim row As Integer = 3
     While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "fdk", "A" & row))
-        Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "fdk", "B" & row)
-        Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "fdk", "C" & row)
-        Dim id As String = GoExcel.CellValue("3rd Party:data", "fdk", "A" & row)
+        Dim objectType As String = GoExcel.CellValue("3rd Party:data", "fdk", "D" & row)
 
-        localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
+        If objectType.Contains(filterValue) Then 
+            Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "fdk", "F" & row)
+            Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "fdk", "H" & row)
+            Dim id As String = GoExcel.CellValue("3rd Party:data", "fdk", "E" & row)
+
+            localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
+            Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
+
+            matchCount += 1
+        End If
+
         row += 1
-        Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
     End While
 
-    Return localFDK
+    Return New Tuple(Of Dictionary(Of String, EigenschaftInfo), Integer)(localFDK, matchCount)
 End Function
 
-Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, EigenschaftInfo))
+Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, EigenschaftInfo), ByVal filter As String)
 
     Dim oDoc As Document = ThisDoc.Document
     Dim oAsm As AssemblyDocument
@@ -49,7 +73,7 @@ Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigenschaf
     End If
 
     For Each oCompOcc In oCompOccs
-        If oCompOcc.Name.Contains("Mast") Then
+        If oCompOcc.Name.Contains(filter) Then
             iProperties.InstanceValue(oCompOcc.Name, "Exemplarname") = oCompOcc.Name
 
             For Each kvp In eigenschaftenDict
@@ -57,7 +81,7 @@ Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigenschaf
                 Dim datentyp As String = kvp.Value.Datentyp
                 Dim id As String = kvp.Value.ID
 
-                Dim wert As Object = "zu definieren" ' Standardwert
+                Dim wert As Object = "zu definieren"
 
                 Select Case datentyp
                     Case "String"
@@ -73,11 +97,9 @@ Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigenschaf
                     Case Else
                         wert = "zu definieren"
                 End Select
-				
+
                 iProperties.InstanceValue(oCompOcc.Name, id & " " & eigenschaft) = wert
             Next
-
-            Logger.Info(oCompOcc.Name)
         End If
     Next
 End Sub
