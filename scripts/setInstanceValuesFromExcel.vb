@@ -96,6 +96,14 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
                 iProperties.InstanceValue(oCompOcc.Name, "Kilometrierung") = kmValue.ToString("F3")
             End If
 
+            ' Extrahiere die Mastbezeichnung, falls vorhanden
+            Dim mastRegex As New System.Text.RegularExpressions.Regex("Mast-(.*?)-")
+            Dim mastMatch As System.Text.RegularExpressions.Match = mastRegex.Match(oCompOcc.Name)
+            If mastMatch.Success Then
+                Dim mastValue As String = mastMatch.Groups(1).Value
+                iProperties.InstanceValue(oCompOcc.Name, "Mastbezeichnung") = mastValue
+            End If
+
             For Each kvp In eigenschaftenDict
                 Dim eigenschaft As String = kvp.Key
                 Dim datentyp As String = kvp.Value.Datentyp
