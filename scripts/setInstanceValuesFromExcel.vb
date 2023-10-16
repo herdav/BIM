@@ -2,9 +2,9 @@ Public Class EigenschaftInfo
     Public Property Datentyp As String
     Public Property ID As String
 
-    Public Sub New(datentyp As String, id As String)
-        Me.Datentyp = datentyp
-        Me.ID = id
+    Public Sub New(Datentyp As String, ID As String)
+        Me.Datentyp = Datentyp
+        Me.ID = ID
     End Sub
 End Class
 
@@ -87,6 +87,14 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
         If oCompOcc.Name.Contains(filter) Then
             componentsModified += 1
             iProperties.InstanceValue(oCompOcc.Name, "Exemplarname") = oCompOcc.Name
+
+            ' Extrahiere den Kilometrierungswert, falls vorhanden, und füge ihn als Instanzeigenschaft hinzu
+            Dim kmRegex As New System.Text.RegularExpressions.Regex("KM(\d+\.\d+)")
+            Dim match As System.Text.RegularExpressions.Match = kmRegex.Match(oCompOcc.Name)
+            If match.Success Then
+                Dim kmValue As Double = Convert.ToDouble(match.Groups(1).Value)
+                iProperties.InstanceValue(oCompOcc.Name, "Kilometrierung") = kmValue.ToString("F3")
+            End If
 
             For Each kvp In eigenschaftenDict
                 Dim eigenschaft As String = kvp.Key
