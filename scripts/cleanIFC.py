@@ -19,6 +19,30 @@ def replace_strings_in_file(filename):
     default_replacement = None
     pty_replacements = []
 
+    # Findet alle Vorkommen von IFCPROPERTYSINGLEVALUE('Kilometrierung', IFCREAL(...))
+    km_matches = re.finditer(r"(IFCPROPERTYSINGLEVALUE\('Kilometrierung',[^,]+,IFCREAL\()([0-9\.]+)(\))", content)
+    
+    # Wir verwenden eine Listenzusammensetzung, um alle Ersetzungen zu sammeln und später in einem Schritt anzuwenden
+    replacements = []
+    for match in km_matches:
+        full_match = match.group(0)
+        value_match = match.group(2)
+        try:
+            # Extrahiere den Wert, multipliziere und runde
+            value = float(value_match)
+            rounded_value = round(value * 30.48, 3)
+            # Erstelle den Ersatz-String
+            replacement = f"{match.group(1)}{rounded_value}{match.group(3)}"
+            replacements.append((full_match, replacement))
+        except ValueError:
+            # Überspringe, falls die Konvertierung zu einem Float fehlschlägt
+            pass
+
+    # Ersetze jeden gefundenen Wert durch den neu berechneten Wert
+    for old, new in replacements:
+        content = content.replace(old, new)
+
+
     # Finde alle Vorkommen der Zeichenkette mit einem regulären Ausdruck
     pty_matches = re.findall(r'PTY_\d+ ', content)
     if pty_matches:
