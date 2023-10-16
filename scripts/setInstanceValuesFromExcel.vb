@@ -14,30 +14,39 @@ End Sub
 
 Sub LoadFDKAndSetEigenschaften()
     Dim filterValue As String = InputBox("Bitte geben Sie den FDK Objekttyp an.", "FDK Objekttyp")
-    
+
     If String.IsNullOrEmpty(filterValue) Then
         MessageBox.Show("Kein Wert eingegeben. Das Skript wird beendet.")
         Exit Sub
     End If
-    
+
     Dim result = LoadFDKFromExcel(filterValue)
     Dim FDK = result.Item1
     Dim count = result.Item2
 
     If count > 0 Then
-        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde in der Excel-Liste {1} Mal gefunden.", filterValue, count))
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde {1} Mal gefunden.", filterValue, count))
     Else
-        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde in der Excel-Liste nicht gefunden.", filterValue))
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde nicht gefunden.", filterValue))
     End If
 
-    SetEigenschaften(FDK, filterValue)
+    Dim componentsModified As Integer = SetEigenschaften(FDK, filterValue)
+
+    MessageBox.Show(String.Format("{0} Komponenten wurden geändert.", componentsModified))
+
+    Dim restartResult As DialogResult = MessageBox.Show("Möchten Sie weitere Komponenten ändern?", "Neustart", MessageBoxButtons.YesNo)
+    If restartResult = DialogResult.Yes Then
+        LoadFDKAndSetEigenschaften()
+    Else
+        Exit Sub ' Skript wird beendet, wenn "Nein" oder eine andere Antwort ausgewählt wird
+    End If
 End Sub
 
 Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of String, EigenschaftInfo), Integer)
     Dim localFDK As New Dictionary(Of String, EigenschaftInfo)()
     Dim matchCount As Integer = 0
 
-    Dim row As Integer = 3
+    Dim row As Integer = 4
     While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "fdk", "A" & row))
         Dim objectType As String = GoExcel.CellValue("3rd Party:data", "fdk", "D" & row)
 
@@ -58,7 +67,9 @@ Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of
     Return New Tuple(Of Dictionary(Of String, EigenschaftInfo), Integer)(localFDK, matchCount)
 End Function
 
-Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, EigenschaftInfo), ByVal filter As String)
+Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, EigenschaftInfo), ByVal filter As String) As Integer
+
+    Dim componentsModified As Integer = 0 ' Zählvariable
 
     Dim oDoc As Document = ThisDoc.Document
     Dim oAsm As AssemblyDocument
@@ -69,11 +80,12 @@ Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigenschaf
         oCompOccs = oAsm.ComponentDefinition.Occurrences
     Else
         MessageBox.Show("Dieses Dokument ist keine Baugruppe!")
-        Exit Sub
+        Exit Function
     End If
 
     For Each oCompOcc In oCompOccs
         If oCompOcc.Name.Contains(filter) Then
+            componentsModified += 1
             iProperties.InstanceValue(oCompOcc.Name, "Exemplarname") = oCompOcc.Name
 
             For Each kvp In eigenschaftenDict
@@ -102,4 +114,6 @@ Sub SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigenschaf
             Next
         End If
     Next
-End Sub
+
+    Return componentsModified
+End Function
