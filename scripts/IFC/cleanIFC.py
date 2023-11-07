@@ -4,104 +4,111 @@
 import os
 import re
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog  # Importiere zusätzliche Dialoge
+from tkinter import filedialog, messagebox, simpledialog
 
 def replace_strings_in_file(filename):
-    # Überprüfe, ob die Datei existiert
     if not os.path.exists(filename):
         print(f"Die Datei {filename} wurde nicht gefunden.")
-        return None, None, None
+        return None, 0, 0
 
-    # Lese den Inhalt der Datei
     with open(filename, 'r', encoding='utf-8') as file:
         content = file.read()
 
     default_replacement = None
-    pty_replacements = []
+    pty_replacement_count = 0  # Zählt die Anzahl der Ersetzungen für PTY_
+    wiv_replacement_count = 0  # Zählt die Anzahl der Ersetzungen für WIV_
 
-    # Findet alle Vorkommen von IFCPROPERTYSINGLEVALUE('Kilometrierung', IFCREAL(...))
-    km_matches = re.finditer(r"(IFCPROPERTYSINGLEVALUE\('Kilometrierung',[^,]+,IFCREAL\()([0-9\.]+)(\))", content)
-    
-    # Wir verwenden eine Listenzusammensetzung, um alle Ersetzungen zu sammeln und später in einem Schritt anzuwenden
-    replacements = []
-    for match in km_matches:
-        full_match = match.group(0)
-        value_match = match.group(2)
-        try:
-            # Extrahiere den Wert, multipliziere und runde
-            value = float(value_match)
-            rounded_value = round(value * 30.48, 3)
-            # Erstelle den Ersatz-String
-            replacement = f"{match.group(1)}{rounded_value}{match.group(3)}"
-            replacements.append((full_match, replacement))
-        except ValueError:
-            # Überspringe, falls die Konvertierung zu einem Float fehlschlägt
-            pass
+    def find_and_replace(pattern):
+        matches = re.finditer(pattern, content)
+        replacements = []
+        for match in matches:
+            full_match = match.group(0)
+            value_match = match.group(2)
+            try:
+                value = float(value_match)
+                rounded_value = round(value * 30.48, 3)
+                replacement = f"{match.group(1)}{rounded_value}{match.group(3)}"
+                replacements.append((full_match, replacement))
+            except ValueError:
+                pass
+        return replacements
 
-    # Ersetze jeden gefundenen Wert durch den neu berechneten Wert
-    for old, new in replacements:
-        content = content.replace(old, new)
+    # Ersetze Kilometrierung und Epsilon
+    patterns = {
+        "Kilometrierung": r"(IFCPROPERTYSINGLEVALUE\('Kilometrierung',[^,]+,IFCREAL\()([-0-9\.]+)(\))",
+        "Epsilon": r"(Epsilon',\s*\$,IFCREAL\()([-0-9\.]+)(\))"
+    }
 
+    for key, pattern in patterns.items():
+        replacements = find_and_replace(pattern)
+        for old, new in replacements:
+            content = content.replace(old, new)
 
-    # Finde alle Vorkommen der Zeichenkette mit einem regulären Ausdruck
-    pty_matches = re.findall(r'PTY_\d+ ', content)
-    if pty_matches:
-        pty_replacements.extend(pty_matches)  # Füge jede gefundene Zeichenkette der Liste hinzu
-        # Ersetze die Zeichenkette mit einem regulären Ausdruck
-        content = re.sub(r'PTY_\d+ ', '', content)
+    # Ersetze PTY_[int] und WIV_[int]
+    for prefix in ['PTY', 'WIV']:
+        pattern = fr'{prefix}_\d+ '
+        count = len(re.findall(pattern, content))
+        content = re.sub(pattern, '', content)
+        if prefix == 'PTY':
+            pty_replacement_count += count
+        else:
+            wiv_replacement_count += count
 
-    # Überprüfe, ob die Zeichenkette "Default" vorkommt
+    # Überprüfe und ersetze "Default"
     if "Default" in content:
-        # Frage den Benutzer, ob "Default" ersetzt werden soll
         replace_default = messagebox.askyesno("Ersetzen", "Soll die Zeichenkette 'Default' ersetzt werden?")
         if replace_default:
-            # Frage den Benutzer nach der Ersatzeichenkette
             replacement = simpledialog.askstring("Ersetzen", "Geben Sie die Ersatzeichenkette für 'Default' ein:")
-            if replacement is None or not replacement.strip():  # Wenn der Benutzer den Dialog abbricht oder nichts eingibt
-                return None, None, None
+            if replacement is None or not replacement.strip():
+                return None, 0, 0
             content = content.replace("Default", replacement)
-            default_replacement = f"Default → {replacement}\n\n"  # Zwei Zeilenumbrüche hinzugefügt
+            default_replacement = f"Default → {replacement}"
 
-    # Frage den Benutzer, ob die Änderungen vorgenommen werden sollen
+    # Benutzerdefinierte Zeichenfolgenersetzung
+    custom_replace = messagebox.askyesno("Benutzerdefinierte Ersetzung", "Möchten Sie eine benutzerdefinierte Zeichenfolge ersetzen?")
+    if custom_replace:
+        target_string = simpledialog.askstring("Zielzeichenfolge", "Geben Sie die zu ersetzende Zeichenfolge ein:")
+        if target_string:
+            replacement_string = simpledialog.askstring("Ersatzeichenfolge", "Geben Sie die Ersatzeichenfolge ein:")
+            if replacement_string is not None:  # Prüfen, ob der Benutzer nicht auf "Abbrechen" geklickt hat.
+                content = content.replace(target_string, replacement_string)
+            else:
+                # Der Benutzer hat auf "Abbrechen" geklickt oder keine Eingabe getätigt.
+                messagebox.showinfo("Abbruch", "Benutzerdefinierte Ersetzung wurde nicht durchgeführt.")
+        else:
+            # Der Benutzer hat auf "Abbrechen" geklickt oder keine Eingabe getätigt.
+            messagebox.showinfo("Abbruch", "Benutzerdefinierte Ersetzung wurde nicht durchgeführt.")
+
     confirm_changes = messagebox.askyesno("Bestätigen", "Möchten Sie die Änderungen wirklich vornehmen?")
     if not confirm_changes:
-        return None, None, None
+        return None, 0, 0
 
-    # Gib den geänderten Inhalt und die Ersetzungen zurück
-    return content, default_replacement, pty_replacements
+    return content, pty_replacement_count, wiv_replacement_count
 
 if __name__ == "__main__":
-    # Erstelle ein Hauptfenster (wird später versteckt)
     root = tk.Tk()
-    root.withdraw()  # Verstecke das Hauptfenster
+    root.withdraw()
 
-    # Öffne ein Dialogfenster zur Dateiauswahl
     filepaths = filedialog.askopenfilenames(title="Wählen Sie die zu bereinigenden Dateien aus",
                                             filetypes=[("IFC Dateien", "*.ifc")])
-    if not filepaths:  # Wenn der Benutzer den Dialog abbricht
+    if not filepaths:
         exit()
 
     default_replacement = None
-    all_pty_replacements = []
-    # Iteriere durch die ausgewählten Dateien und bereinige sie
-    for filepath in filepaths:
-        content, default_repl, pty_repls = replace_strings_in_file(filepath)
-        if content is None:  # Wenn der Benutzer den Dialog abgebrochen hat
-            continue
-        if default_repl:
-            default_replacement = default_repl
-        all_pty_replacements.extend(pty_repls)
+    total_pty_replacement_count = 0
+    total_wiv_replacement_count = 0
 
-        # Speichere die geänderte Datei
+    for filepath in filepaths:
+        content, pty_repl_count, wiv_repl_count = replace_strings_in_file(filepath)
+        if content is None:
+            continue
+        total_pty_replacement_count += pty_repl_count
+        total_wiv_replacement_count += wiv_repl_count
         with open(filepath, 'w', encoding='utf-8') as file:
             file.write(content)
 
-    # Organisiere die Ausgabe
-    output = []
+    output = f"Es wurden {total_pty_replacement_count} 'PTY_' und {total_wiv_replacement_count} 'WIV_' Ersetzungen vorgenommen."
     if default_replacement:
-        output.append(default_replacement)
-    output.extend(all_pty_replacements)
+        output = f"{default_replacement}\n{output}"
 
-    # Zeige ein Fenster mit den bereinigten Zeichenketten, getrennt durch ein Leerzeichen
-    replacement_strings = " ".join(output)
-    messagebox.showinfo("Bereinigte Zeichenketten", f"Folgende Änderungen wurden vorgenommen:\n\n{replacement_strings}")
+    messagebox.showinfo("Bereinigungsbericht", output)
