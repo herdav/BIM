@@ -46,20 +46,21 @@ Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of
     Dim localFDK As New Dictionary(Of String, EigenschaftInfo)()
     Dim matchCount As Integer = 0
 
-    Dim row As Integer = 4
-    While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "fdk", "A" & row))
-        Dim objectType As String = GoExcel.CellValue("3rd Party:data", "fdk", "D" & row)
+    Dim row As Integer = 2
+    While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "FDK", "A" & row))
+        Dim objekttypNameDE As String = GoExcel.CellValue("3rd Party:data", "FDK", "D" & row)
 
-        If objectType.Contains(filterValue) Then 
-            Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "fdk", "F" & row)
-            Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "fdk", "H" & row)
-            Dim id As String = GoExcel.CellValue("3rd Party:data", "fdk", "E" & row)
-
-            localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
-            Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
-
-            matchCount += 1
-        End If
+		If objekttypNameDE.Contains(filterValue) Then 
+		    Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "FDK", "F" & row)
+		    Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "FDK", "H" & row)
+		    Dim id As String = GoExcel.CellValue("3rd Party:data", "FDK", "E" & row)
+		
+		    If Not localFDK.ContainsKey(eigenschaft) Then
+		        localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
+		        Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
+		        matchCount += 1
+		    End If
+		End If
 
         row += 1
     End While
@@ -86,7 +87,7 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
     For Each oCompOcc In oCompOccs
         If oCompOcc.Name.Contains(filter) Then
             componentsModified += 1
-            iProperties.InstanceValue(oCompOcc.Name, "Exemplarname") = oCompOcc.Name
+            iProperties.InstanceValue(oCompOcc.Name, "WIV_1 InstanzName") = oCompOcc.Name
 
             ' Extrahiere den Kilometrierungswert, falls vorhanden, und füge ihn als Instanzeigenschaft hinzu
             Dim kmRegex As New System.Text.RegularExpressions.Regex("KM(\d+\.\d+)")
@@ -109,11 +110,11 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
                 Dim datentyp As String = kvp.Value.Datentyp
                 Dim id As String = kvp.Value.ID
 
-                Dim wert As Object = "zu definieren"
+                Dim wert As Object = "nicht definiert"
 
                 Select Case datentyp
                     Case "String"
-                        wert = "zu definieren"
+                        wert = "nicht definiert"
                     Case "Double", "Real"
                         wert = 0.0
                     Case "Date", "Datum"
@@ -123,7 +124,7 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
                     Case "Integer"
                         wert = 0
                     Case Else
-                        wert = "zu definieren"
+                        wert = "nicht definiert"
                 End Select
 
                 iProperties.InstanceValue(oCompOcc.Name, id & " " & eigenschaft) = wert
