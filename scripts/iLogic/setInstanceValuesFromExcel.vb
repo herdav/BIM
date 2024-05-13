@@ -1,3 +1,6 @@
+'Set Instance Values from Excel
+'Version 13.05.2024 by David Herren @ WiVi AG
+
 Public Class EigenschaftInfo
     Public Property Datentyp As String
     Public Property ID As String
@@ -13,7 +16,7 @@ Sub Main()
 End Sub
 
 Sub LoadFDKAndSetEigenschaften()
-    Dim filterValue As String = InputBox("Bitte geben Sie den FDK Objekttyp an.", "FDK Objekttyp")
+    Dim filterValue As String = InputBox("Bitte geben Sie den FDK Objekttyp exakt an.", "FDK Objekttyp")
 
     If String.IsNullOrEmpty(filterValue) Then
         MessageBox.Show("Kein Wert eingegeben. Das Skript wird beendet.")
@@ -25,9 +28,9 @@ Sub LoadFDKAndSetEigenschaften()
     Dim count = result.Item2
 
     If count > 0 Then
-        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde {1} Mal gefunden.", filterValue, count))
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde {1} Mal genau gefunden.", filterValue, count))
     Else
-        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde nicht gefunden.", filterValue))
+        MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde nicht genau gefunden.", filterValue))
     End If
 
     Dim componentsModified As Integer = SetEigenschaften(FDK, filterValue)
@@ -47,20 +50,27 @@ Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of
     Dim matchCount As Integer = 0
 
     Dim row As Integer = 2
-    While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "FDK", "A" & row))
-        Dim objekttypNameDE As String = GoExcel.CellValue("3rd Party:data", "FDK", "D" & row)
+    While Not String.IsNullOrEmpty(GoExcel.CellValue("3rd Party:data", "FDK", "A" & row)) 'ID Obejktgruppe
+        ' Überprüfe, ob in Spalte K 'Nein' steht, und überspringe die Zeile falls ja
+        Dim skipRow As String = GoExcel.CellValue("3rd Party:data", "FDK", "K" & row)
+        If skipRow = "Nein" Then
+            row += 1
+            Continue While
+        End If
 
-		If objekttypNameDE.Contains(filterValue) Then 
-		    Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "FDK", "F" & row)
-		    Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "FDK", "H" & row)
-		    Dim id As String = GoExcel.CellValue("3rd Party:data", "FDK", "E" & row)
-		
-		    If Not localFDK.ContainsKey(eigenschaft) Then
-		        localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
-		        Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
-		        matchCount += 1
-		    End If
-		End If
+        Dim objekttypNameDE As String = GoExcel.CellValue("3rd Party:data", "FDK", "D" & row) 'ObjekttypNameDE
+
+        If objekttypNameDE = filterValue Then 
+            Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "FDK", "F" & row) 'Eigenschaft
+            Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "FDK", "H" & row)   'Format
+            Dim id As String = GoExcel.CellValue("3rd Party:data", "FDK", "E" & row)         'ID Eigenschaft
+
+            If Not localFDK.ContainsKey(eigenschaft) Then
+                localFDK.Add(eigenschaft, New EigenschaftInfo(datentyp, id))
+                Logger.Info(id + "_" + eigenschaft + "_" + datentyp)
+                matchCount += 1
+            End If
+        End If
 
         row += 1
     End While
@@ -69,7 +79,6 @@ Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of
 End Function
 
 Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, EigenschaftInfo), ByVal filter As String) As Integer
-
     Dim componentsModified As Integer = 0 ' Zählvariable
 
     Dim oDoc As Document = ThisDoc.Document
@@ -84,26 +93,10 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
         Exit Function
     End If
 
+    Dim filterPattern As String = "-" & filter & ":"
     For Each oCompOcc In oCompOccs
-        If oCompOcc.Name.Contains(filter) Then
+        If oCompOcc.Name.Contains(filterPattern) Then
             componentsModified += 1
-            iProperties.InstanceValue(oCompOcc.Name, "WIV_1 InstanzName") = oCompOcc.Name
-
-            ' Extrahiere den Kilometrierungswert, falls vorhanden, und füge ihn als Instanzeigenschaft hinzu
-            Dim kmRegex As New System.Text.RegularExpressions.Regex("KM(\d+\.\d+)")
-            Dim match As System.Text.RegularExpressions.Match = kmRegex.Match(oCompOcc.Name)
-            If match.Success Then
-                Dim kmValue As Double = Convert.ToDouble(match.Groups(1).Value)
-                iProperties.InstanceValue(oCompOcc.Name, "Kilometrierung") = kmValue.ToString("F3")
-            End If
-
-            ' Extrahiere die Mastbezeichnung, falls vorhanden
-            Dim mastRegex As New System.Text.RegularExpressions.Regex("Mast-(.*?)-")
-            Dim mastMatch As System.Text.RegularExpressions.Match = mastRegex.Match(oCompOcc.Name)
-            If mastMatch.Success Then
-                Dim mastValue As String = mastMatch.Groups(1).Value
-                iProperties.InstanceValue(oCompOcc.Name, "Mastbezeichnung") = mastValue
-            End If
 
             For Each kvp In eigenschaftenDict
                 Dim eigenschaft As String = kvp.Key
