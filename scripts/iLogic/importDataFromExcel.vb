@@ -1,7 +1,5 @@
-' -------------------------------------------------- '
-' Import data from excel and generate oriented parts '
-'   Version 7.11.2023 by David Herren @ WiVi AG
-' -------------------------------------------------- '
+'Import data from excel and generate oriented parts
+'Version 14.05.2024 by David Herren @ WiVi AG
 
 '[ Setup
 Dim n = 100          'number of parts / datasets
@@ -69,13 +67,13 @@ For i = n_min - 1 To n_max - 1 'Load data from excel an safe it in an array
 	name_bks(i) = stat(i) & "-QP-" & nr(i) & "-BKS:" & i
 	
 	position_bks(i) = ThisAssembly.Geometry.Point(xe(i), yn(i), zz(i))
-	Components.Add(name_bks(i), ThisDoc.Path & "\SKLT\bks.ipt", position_bks(i), True, False)
+	Components.Add(name_bks(i), ThisDoc.Path & "..\..\SKLT\bks.ipt", position_bks(i), True, False)
 	']
 
 	'[ Generate direction-parts in modell / assembly
 	name_dir(i) = stat(i) & "-QP-" & nr(i) & "-DIR:" & i
 	position_dir(i) = ThisAssembly.Geometry.Point(xd(i), yd(i), zz(i))
-	Components.Add(name_dir(i), ThisDoc.Path & "\SKLT\dir.ipt", position_dir(i), True, False)
+	Components.Add(name_dir(i), ThisDoc.Path & "..\..\SKLT\dir.ipt", position_dir(i), True, False)
 	']
 	
 	'[ Calculate direction between bks(i) and dir(i)
@@ -113,7 +111,7 @@ For i = n_min - 1 To n_max - 1
     ' Add the occurrence depending on typ(i).
     Dim oOcc As ComponentOccurrence
 	
-	oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "\SKLT\sklt.iam", oMatrix)
+	oOcc = oAsmCompDef.Occurrences.Add(ThisDoc.Path & "..\..\SKLT\sklt.iam", oMatrix)
 	name_sklt(i) = stat(i) & "-QP-" & nr(i) & "-SKLT:" & i
 	oOcc.Name = name_sklt(i)
 	
@@ -123,6 +121,7 @@ For i = n_min - 1 To n_max - 1
 	Logger.Info(name_sklt(i))
 Next
 ']
+
 
 '[ Set constraints
 For i = n_min - 1 To n_max - 1
