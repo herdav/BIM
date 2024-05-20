@@ -1,5 +1,5 @@
 'Set Instance Values from Excel
-'Version 14.05.2024 by David Herren @ WiVi AG
+'Version 20.05.2024 by David Herren @ WiVi AG
 
 Public Class EigenschaftInfo
   Public Property Datentyp As String
@@ -28,17 +28,19 @@ Sub LoadFDKAndSetEigenschaften()
       Continue While
     End If
 
-    Dim result = LoadFDKFromExcel(filterValue)
+    Dim excelFilterValue As String = If(filterValue = "Ausleger", "Ausleger (FS)", filterValue)
+    Dim result = LoadFDKFromExcel(excelFilterValue)
     Dim FDK = result.Item1
     Dim count = result.Item2
 
     If count > 0 Then
-      MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde {1} Mal gefunden.", filterValue, count))
+      MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde {1} Mal gefunden.", excelFilterValue, count))
     Else
-      MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde nicht gefunden.", filterValue))
+      MessageBox.Show(String.Format("Der Objekttyp '{0}' wurde nicht gefunden.", excelFilterValue))
     End If
 
-    Dim componentsModified As Integer = SetEigenschaften(FDK, filterValue)
+    Dim modelFilterValue As String = "Ausleger"
+    Dim componentsModified As Integer = SetEigenschaften(FDK, modelFilterValue)
 
     MessageBox.Show(String.Format("{0} Komponenten wurden geändert.", componentsModified))
 
@@ -106,7 +108,7 @@ Function LoadFDKFromExcel(ByVal filterValue As String) As Tuple(Of Dictionary(Of
 
     Dim objekttypNameDE As String = GoExcel.CellValue("3rd Party:data", "FDK", "D" & row) 'ObjekttypNameDE
 
-    If objekttypNameDE = filterValue Then 
+    If objekttypNameDE = filterValue Then
       Dim eigenschaft As String = GoExcel.CellValue("3rd Party:data", "FDK", "F" & row) 'Eigenschaft
       Dim datentyp As String = GoExcel.CellValue("3rd Party:data", "FDK", "H" & row) 'Format
       Dim id As String = GoExcel.CellValue("3rd Party:data", "FDK", "E" & row) 'ID Eigenschaft
@@ -139,9 +141,9 @@ Function SetEigenschaften(ByVal eigenschaftenDict As Dictionary(Of String, Eigen
     Return componentsModified
   End If
 
-  Dim filterPattern As String = "-" & filter & ":"
   For Each oCompOcc In oCompOccs
-    If oCompOcc.Name.Contains(filterPattern) Then
+    ' Suche nach dem Pattern im Namen der Komponenten
+    If oCompOcc.Name.Contains(filter) Then
       componentsModified += 1
 
       For Each kvp In eigenschaftenDict
