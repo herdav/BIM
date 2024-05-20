@@ -22,17 +22,18 @@ Class placePartsOnSKLT
     Private fBIMDeX As Integer = 1 '30.48 Factor for BIMDeX Export?
     Private nr(n) As String
 
-    Sub Main()
-        Dim selection = SelectFDKType(n_max)
-        If selection Is Nothing Then
-            Logger.Info("Keine Auswahl getroffen oder ungültiger Wert für n_max.")
-            Exit Sub
-        End If
-        
-        Dim action As String = selection.Item1
-        n_max = selection.Item2
-        
-        ImportData(n_max)
+	Sub Main()
+	    Dim selection = SelectFDKType(n_min, n_max)
+	    If selection Is Nothing Then
+	        Logger.Info("Keine Auswahl getroffen oder ungültiger Wert für n_min oder n_max.")
+	        Exit Sub
+	    End If
+	    
+	    Dim Action As String = selection.Item1
+	    n_min = selection.Item2
+	    n_max = selection.Item3
+	
+	    ImportData(n_min, n_max)
         
         If action = "Ausleger" Or action = "Alle" Then
             '[ Generate position oriented parts: Ausleger
@@ -233,112 +234,126 @@ Class placePartsOnSKLT
         Logger.Info("Finished.")
     End Sub
     
-    ' Function for selecting the action to be executed and for entering n_max
-    Function SelectFDKType(defaultMax As Integer) As Tuple(Of String, Integer)
-        Dim validFilterValues As String() = {"Bitte eine Auswahl treffen", "Ausleger", "Spurhalter", "Spurhalterabzug", "Alle"}
-        Dim form As New System.Windows.Forms.Form
-        Dim comboBox As New System.Windows.Forms.ComboBox
-        Dim textBox As New System.Windows.Forms.TextBox
-        Dim label As New System.Windows.Forms.Label
-        Dim buttonOK As New System.Windows.Forms.Button
-        Dim buttonCancel As New System.Windows.Forms.Button
-    
-        form.Text = "Aktion ausführen"
-        form.Width = 400
-        form.Height = 200
-        form.StartPosition = FormStartPosition.CenterScreen
-    
-        comboBox.DropDownStyle = ComboBoxStyle.DropDownList
-        comboBox.Items.AddRange(validFilterValues)
-        comboBox.SelectedIndex = 0
-        comboBox.Left = 50
-        comboBox.Top = 30
-        comboBox.Width = 250
-        form.Controls.Add(comboBox)
-    
-        label.Text = "n_max:"
-        label.Left = 50
-        label.Top = 70
-        form.Controls.Add(label)
-    
-        textBox.Text = defaultMax.ToString()
-        textBox.Left = 150
-        textBox.Top = 70
-        textBox.Width = 100
-        form.Controls.Add(textBox)
-    
-        buttonOK.Text = "OK"
-        buttonOK.Left = 50
-        buttonOK.Top = 110
-        buttonOK.Width = 80
-        AddHandler buttonOK.Click, Sub(sender, e) form.DialogResult = DialogResult.OK
-        form.Controls.Add(buttonOK)
-    
-        buttonCancel.Text = "Abbrechen"
-        buttonCancel.Left = 150
-        buttonCancel.Top = 110
-        buttonCancel.Width = 80
-        AddHandler buttonCancel.Click, Sub(sender, e) form.DialogResult = DialogResult.Cancel
-        form.Controls.Add(buttonCancel)
-    
-        If form.ShowDialog() = DialogResult.OK Then
-            If comboBox.SelectedItem IsNot Nothing AndAlso IsNumeric(textBox.Text) Then
-                Dim selection As String = comboBox.SelectedItem.ToString()
-                Dim n_max As Integer = Integer.Parse(textBox.Text)
-                Return New Tuple(Of String, Integer)(selection, n_max)
-            End If
+' Function for selecting the action to be executed and for entering n_min and n_max
+Function SelectFDKType(defaultMin As Integer, defaultMax As Integer) As Tuple(Of String, Integer, Integer)
+    Dim validFilterValues As String() = {"Bitte eine Auswahl treffen", "Ausleger", "Spurhalter", "Spurhalterabzug", "Alle"}
+    Dim form As New System.Windows.Forms.Form
+    Dim comboBox As New System.Windows.Forms.ComboBox
+    Dim textBoxMin As New System.Windows.Forms.TextBox
+    Dim textBoxMax As New System.Windows.Forms.TextBox
+    Dim labelMin As New System.Windows.Forms.Label
+    Dim labelMax As New System.Windows.Forms.Label
+    Dim buttonOK As New System.Windows.Forms.Button
+    Dim buttonCancel As New System.Windows.Forms.Button
+
+    form.Text = "Aktion ausführen"
+    form.Width = 400
+    form.Height = 250
+    form.StartPosition = FormStartPosition.CenterScreen
+
+    comboBox.DropDownStyle = ComboBoxStyle.DropDownList
+    comboBox.Items.AddRange(validFilterValues)
+    comboBox.SelectedIndex = 0
+    comboBox.Left = 50
+    comboBox.Top = 30
+    comboBox.Width = 250
+    form.Controls.Add(comboBox)
+
+    labelMin.Text = "n_min:"
+    labelMin.Left = 50
+    labelMin.Top = 70
+    form.Controls.Add(labelMin)
+
+    textBoxMin.Text = defaultMin.ToString()
+    textBoxMin.Left = 150
+    textBoxMin.Top = 70
+    textBoxMin.Width = 100
+    form.Controls.Add(textBoxMin)
+
+    labelMax.Text = "n_max:"
+    labelMax.Left = 50
+    labelMax.Top = 110
+    form.Controls.Add(labelMax)
+
+    textBoxMax.Text = defaultMax.ToString()
+    textBoxMax.Left = 150
+    textBoxMax.Top = 110
+    textBoxMax.Width = 100
+    form.Controls.Add(textBoxMax)
+
+    buttonOK.Text = "OK"
+    buttonOK.Left = 50
+    buttonOK.Top = 150
+    buttonOK.Width = 80
+    AddHandler buttonOK.Click, Sub(sender, e) form.DialogResult = DialogResult.OK
+    form.Controls.Add(buttonOK)
+
+    buttonCancel.Text = "Abbrechen"
+    buttonCancel.Left = 150
+    buttonCancel.Top = 150
+    buttonCancel.Width = 80
+    AddHandler buttonCancel.Click, Sub(sender, e) form.DialogResult = DialogResult.Cancel
+    form.Controls.Add(buttonCancel)
+
+    If form.ShowDialog() = DialogResult.OK Then
+        If comboBox.SelectedItem IsNot Nothing AndAlso IsNumeric(textBoxMin.Text) AndAlso IsNumeric(textBoxMax.Text) Then
+            Dim selection As String = comboBox.SelectedItem.ToString()
+            Dim n_min As Integer = Integer.Parse(textBoxMin.Text)
+            Dim n_max As Integer = Integer.Parse(textBoxMax.Text)
+            Return New Tuple(Of String, Integer, Integer)(selection, n_min, n_max)
         End If
+    End If
+
+    Return Nothing
+End Function
     
-        Return Nothing
-    End Function
-    
-    Sub ImportData(n_max As Integer)
-        x_red = GoExcel.CellValue("3rd Party:data", "data", "T" & 1)
-        y_red = GoExcel.CellValue("3rd Party:data", "data", "U" & 1)
-        z_red = GoExcel.CellValue("3rd Party:data", "data", "V" & 1)
-    
-        For i = n_min - 1 To n_max - 1
-            nr(i)     =  GoExcel.CellValue("3rd Party:data", "data", "C"  & i + r)              'Nr
-            typ(i)    =  GoExcel.CellValue("3rd Party:data", "data", "E"  & i + r)              'Typ
-            hf(i)     =  GoExcel.CellValue("3rd Party:data", "data", "F"  & i + r)              'Höhe zwischen Fahrdraht und Gleis
-            hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G"  & i + r)              'Höhe zwischen Tragseil und Gleis
-            ht(i)     =  GoExcel.CellValue("3rd Party:data", "data", "H"  & i + r)              'Höhe zwischen Tragrohrachse und Gleis
-            alr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "J"  & i + r)              'Abstand zwischen Gleisachse und Befestigung
-            α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "M"  & i + r)              'Neigung Gleisachse
-            δ(i)      =  GoExcel.CellValue("3rd Party:data", "data", "N"  & i + r)              'Versatz Gleisachse
-            ε(i)      =  GoExcel.CellValue("3rd Party:data", "data", "O"  & i + r)              'Versatz Fahrzeugachse
-            xe(i)     = (GoExcel.CellValue("3rd Party:data", "data", "T"  & i + r) - x_red) * f 'X(E)-Achse Fundament
-            yn(i)     = (GoExcel.CellValue("3rd Party:data", "data", "U"  & i + r) - y_red) * f 'Y(N)-Achse Fundament
-            zz(i)     = (GoExcel.CellValue("3rd Party:data", "data", "V"  & i + r) - z_red) * f 'Z(Z)-Achse Fundament
-            xd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "W"  & i + r) - x_red) * f 'X(E)-Achse Ausrichtung
-            yd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "X"  & i + r) - y_red) * f 'Y(N)-Achse Ausrichtung
-            switch(i) =  GoExcel.CellValue("3rd Party:data", "data", "Y"  & i + r)              'Switch bks and dir
-            lmr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "Z"  & i + r)              'Befestigung Fahrdraht Links, Mitte oder Rechts der Gleisachse
-            shift(i)  =  GoExcel.CellValue("3rd Party:data", "data", "AA" & i + r)              'Position Ausrichtung Tragwerk schieben (innen <> aussen)
-            KM(i)     = GoExcel.CellValue("3rd Party:data", "data", "AG" & i + r)               'Kilometrierung
-            Status(i) = GoExcel.CellValue("3rd Party:data", "data", "AJ" & i + r)               'Status: Neu, Abbruch, Bestand, Referenz (Bestand - Abbruch) 
-    
-            If (switch(i) = "true") Then 'Switch bks and dir
-                tempX(i) = xd(i)
-                tempY(i) = yd(i)
-                xd(i) = xe(i)
-                yd(i) = yn(i)
-                xe(i) = tempX(i)
-                yn(i) = tempY(i)
-            End If
-    
-            If (Status(i) = "Bestand") Then
-                stat(i) = "B"
-            ElseIf (Status(i) = "Abbruch") Then
-                stat(i) = "A"
-            ElseIf (Status(i) = "Neu") Then
-                stat(i) = "N"
-            Else
-                stat(i) = "nicht definiert"
-            End If
-        Next
-        Logger.Info("Done setup.")
-    End Sub
+    Sub ImportData(n_min As Integer, n_max As Integer)
+	    x_red = GoExcel.CellValue("3rd Party:data", "data", "T" & 1)
+	    y_red = GoExcel.CellValue("3rd Party:data", "data", "U" & 1)
+	    z_red = GoExcel.CellValue("3rd Party:data", "data", "V" & 1)
+	
+	    For i = n_min - 1 To n_max - 1
+	        nr(i)     =  GoExcel.CellValue("3rd Party:data", "data", "C"  & i + r)              'Nr
+	        typ(i)    =  GoExcel.CellValue("3rd Party:data", "data", "E"  & i + r)              'Typ
+	        hf(i)     =  GoExcel.CellValue("3rd Party:data", "data", "F"  & i + r)              'Höhe zwischen Fahrdraht und Gleis
+	        hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G"  & i + r)              'Höhe zwischen Tragseil und Gleis
+	        ht(i)     =  GoExcel.CellValue("3rd Party:data", "data", "H"  & i + r)              'Höhe zwischen Tragrohrachse und Gleis
+	        alr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "J"  & i + r)              'Abstand zwischen Gleisachse und Befestigung
+	        α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "M"  & i + r)              'Neigung Gleisachse
+	        δ(i)      =  GoExcel.CellValue("3rd Party:data", "data", "N"  & i + r)              'Versatz Gleisachse
+	        ε(i)      =  GoExcel.CellValue("3rd Party:data", "data", "O"  & i + r)              'Versatz Fahrzeugachse
+	        xe(i)     = (GoExcel.CellValue("3rd Party:data", "data", "T"  & i + r) - x_red) * f 'X(E)-Achse Fundament
+	        yn(i)     = (GoExcel.CellValue("3rd Party:data", "data", "U"  & i + r) - y_red) * f 'Y(N)-Achse Fundament
+	        zz(i)     = (GoExcel.CellValue("3rd Party:data", "data", "V"  & i + r) - z_red) * f 'Z(Z)-Achse Fundament
+	        xd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "W"  & i + r) - x_red) * f 'X(E)-Achse Ausrichtung
+	        yd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "X"  & i + r) - y_red) * f 'Y(N)-Achse Ausrichtung
+	        switch(i) =  GoExcel.CellValue("3rd Party:data", "data", "Y"  & i + r)              'Switch bks and dir
+	        lmr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "Z"  & i + r)              'Befestigung Fahrdraht Links, Mitte oder Rechts der Gleisachse
+	        shift(i)  =  GoExcel.CellValue("3rd Party:data", "data", "AA" & i + r)              'Position Ausrichtung Tragwerk schieben (innen <> aussen)
+	        KM(i)     = GoExcel.CellValue("3rd Party:data", "data", "AG" & i + r)               'Kilometrierung
+	        Status(i) = GoExcel.CellValue("3rd Party:data", "data", "AJ" & i + r)               'Status: Neu, Abbruch, Bestand, Referenz (Bestand - Abbruch) 
+	
+	        If (switch(i) = "true") Then 'Switch bks and dir
+	            tempX(i) = xd(i)
+	            tempY(i) = yd(i)
+	            xd(i) = xe(i)
+	            yd(i) = yn(i)
+	            xe(i) = tempX(i)
+	            yn(i) = tempY(i)
+	        End If
+	
+	        If (Status(i) = "Bestand") Then
+	            stat(i) = "B"
+	        ElseIf (Status(i) = "Abbruch") Then
+	            stat(i) = "A"
+	        ElseIf (Status(i) = "Neu") Then
+	            stat(i) = "N"
+	        Else
+	            stat(i) = "nicht definiert"
+	        End If
+	    Next
+	    Logger.Info("Done setup.")
+	End Sub
 
     ' Function to create matrix with rotation and translation
     Function CreateMatrix(angle As Double, x_e As Double, x_d As Double, y_n As Double, y_d As Double, z_z As Double) As Matrix
