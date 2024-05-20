@@ -4,27 +4,25 @@
 Imports System.Windows.Forms
 
 Class placePartsOnSKLT
-  Sub Main()
-    '[ Setup
-    Dim n = 100          'number of parts / datasets
-    Dim n_min = 1        'set min range
-    Dim n_max = 100		 'set max range
-    Dim r = 5            'number of 1st row
-    Dim c = 8            'number of columns !!
-    Dim f = 1000         'convert data to mm for vectors
-    Dim name_bks(n), name_dir(n), position_bks(n), position_dir(n), name_sklt(n), name_trwk(n), name_sptr(n), name_shaz(n)
-    Dim x_red = GoExcel.CellValue("3rd Party:data", "data", "T" & 1) 'shift X !!
-    Dim y_red = GoExcel.CellValue("3rd Party:data", "data", "U" & 1) 'shift Y !!
-    Dim z_red = GoExcel.CellValue("3rd Party:data", "data", "V" & 1) 'shift Z !!
-    Dim typ(n), xe(n), yn(n), zz(n), xd(n), yd(n), a(n), switch(n), shift(n)
-    Dim tempX(n), tempY(n)
-    Dim ht(n), hf(n), alr(n), δ(n), ε(n), lmr(n), hp(n), α(n)
-    Dim ObjekttypID(n), ObjekttypNameDE(n), Status(n), stat(n), Objektcode(n), DIDOK(n)    'FDK / BIM Data
-    Dim KM(n) As String, fBIMDeX = 1 '30.48 Factor for BIMDeX Export?
-    Dim nr(n) As String
-    Logger.Info("Datasets: " & n)
-    
-    ' Auswahl der Aktion und Eingabe von n_max
+	Private n As Integer = 100          'number of parts / datasets
+    Private n_min As Integer = 1        'set min range
+	Private n_max As Integer = 100      'set max range
+    Private r As Integer = 5            'number of 1st row
+    Private c As Integer = 8            'number of columns !!
+    Private f As Integer = 1000         'convert data to mm for vectors
+    Private name_bks(n), name_dir(n), position_bks(n), position_dir(n), name_sklt(n), name_trwk(n), name_sptr(n), name_shaz(n)
+    Private x_red As Double
+    Private y_red As Double
+    Private z_red As Double
+    Private typ(n), xe(n), yn(n), zz(n), xd(n), yd(n), a(n), switch(n), shift(n)
+    Private tempX(n), tempY(n)
+    Private ht(n), hf(n), alr(n), δ(n), ε(n), lmr(n), hp(n), α(n)
+    Private ObjekttypID(n), ObjekttypNameDE(n), Status(n), stat(n), Objektcode(n), DIDOK(n)    'FDK / BIM Data
+    Private KM(n) As String
+    Private fBIMDeX As Integer = 1 '30.48 Factor for BIMDeX Export?
+    Private nr(n) As String
+	
+	Sub Main()
     Dim selection = SelectFDKType(n_max)
     If selection Is Nothing Then
       Logger.Info("Keine Auswahl getroffen oder ungültiger Wert für n_max.")
@@ -33,49 +31,8 @@ Class placePartsOnSKLT
     
     Dim action As String = selection.Item1
     n_max = selection.Item2
-
-    '[ Import Data from excel
-    For i = n_min - 1 To n_max - 1 'Load data from excel and save it in an array
-      nr(i)     =  GoExcel.CellValue("3rd Party:data", "data", "C"  & i + r)              'Nr
-      typ(i)    =  GoExcel.CellValue("3rd Party:data", "data", "E"  & i + r)              'Typ
-      hf(i)     =  GoExcel.CellValue("3rd Party:data", "data", "F"  & i + r)              'Höhe zwischen Fahrdraht und Gleis
-      hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G"  & i + r)              'Höhe zwischen Tragseil und Gleis
-      ht(i)     =  GoExcel.CellValue("3rd Party:data", "data", "H"  & i + r)              'Höhe zwischen Tragrohrachse und Gleis
-      alr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "J"  & i + r)              'Abstand zwischen Gleisachse und Befestigung
-      α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "M"  & i + r)              'Neigung Gleisachse
-      δ(i)      =  GoExcel.CellValue("3rd Party:data", "data", "N"  & i + r)              'Versatz Gleisachse
-      ε(i)      =  GoExcel.CellValue("3rd Party:data", "data", "O"  & i + r)              'Versatz Fahrzeugachse
-      xe(i)     = (GoExcel.CellValue("3rd Party:data", "data", "T"  & i + r) - x_red) * f 'X(E)-Achse Fundament
-      yn(i)     = (GoExcel.CellValue("3rd Party:data", "data", "U"  & i + r) - y_red) * f 'Y(N)-Achse Fundament
-      zz(i)     = (GoExcel.CellValue("3rd Party:data", "data", "V"  & i + r) - z_red) * f 'Z(Z)-Achse Fundament
-      xd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "W"  & i + r) - x_red) * f 'X(E)-Achse Ausrichtung
-      yd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "X"  & i + r) - y_red) * f 'Y(N)-Achse Ausrichtung
-      switch(i) =  GoExcel.CellValue("3rd Party:data", "data", "Y"  & i + r)              'Switch bks and dir
-      lmr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "Z"  & i + r)              'Befestigung Fahrdraht Links, Mitte oder Rechts der Gleisachse
-      shift(i)  =  GoExcel.CellValue("3rd Party:data", "data", "AA" & i + r)              'Position Ausrichtung Tragwerk schieben (innen <> aussen)
-      KM(i)     =  GoExcel.CellValue("3rd Party:data", "data", "AG" & i + r)
-      Status(i) =  GoExcel.CellValue("3rd Party:data", "data", "AJ" & i + r)
-      
-      If (switch(i) = "true") 'Switch bks and dir
-        tempX(i) = xd(i)
-        tempY(i) = yd(i)
-        xd(i) = xe(i)
-        yd(i) = yn(i)
-        xe(i) = tempX(i)
-        yn(i) = tempY(i)
-      End If
-      
-      If (Status(i) = "Bestand")
-        stat(i) = "B"
-      Else If (Status(i) = "Abbruch")
-        stat(i) = "A"
-      Else If (Status(i) = "Neu")
-        stat(i) = "N"
-      Else 
-        stat(i) = "nicht definiert"
-      End If
-    Next
-    Logger.Info("Done setup.")
+	
+	ImportData(n_max)
     
     If action = "Ausleger" Or action = "Alle" Then
       '[ Generate position oriented parts: Ausleger
@@ -266,12 +223,12 @@ Class placePartsOnSKLT
     '[ Set instance values
     For i = n_min - 1 To n_max - 1
       If action = "Ausleger" Or action = "Alle" Then
-        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R") '& " xx" > makes sure iProperties is a text
+        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R")
           ' iProperties.InstanceValue(name_trwk(i), "WIV_1 InstanzName")     = name_trwk(i)
           ' iProperties.InstanceValue(name_trwk(i), "WIV_2 Typ")             = typ(i)
           ' iProperties.InstanceValue(name_trwk(i), "WIV_3 QP")              = nr(i)
           ' iProperties.InstanceValue(name_trwk(i), "WIV_4 Epsilon")         = ε(i)
-          ' iProperties.InstanceValue(name_trwk(i), "PTY_0 Kilometrierung")  = KM(i)
+          iProperties.InstanceValue(name_trwk(i), "PTY_0 Kilometrierung")  = KM(i)
           iProperties.InstanceValue(name_trwk(i), "PTY_0 Status")          = Status(i)
           iProperties.InstanceValue(name_trwk(i), "PTY_0 Objektcode")      = "tl03"
           iProperties.InstanceValue(name_trwk(i), "PTY_0 DIDOK")           = "HIGT"
@@ -281,7 +238,7 @@ Class placePartsOnSKLT
       End If
       
       If action = "Spurhalter" Or action = "Alle" Then
-        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R") '& " xx" > makes sure iProperties is a text
+        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R")
           iProperties.InstanceValue(name_sptr(i), "PTY_0 Status")          = Status(i)
           iProperties.InstanceValue(name_sptr(i), "PTY_0 Objektcode")      = "tl03"
           iProperties.InstanceValue(name_sptr(i), "PTY_0 DIDOK")           = "HIGT"
@@ -291,7 +248,7 @@ Class placePartsOnSKLT
       End If
       
       If action = "Spurhalterabzug" Or action = "Alle" Then
-        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R") '& " xx" > makes sure iProperties is a text
+        If (typ(i) = "Typ10A" Or typ(i) = "Typ10R" Or typ(i) = "Typ21A" Or typ(i) = "Typ21R")
           iProperties.InstanceValue(name_shaz(i), "PTY_0 Status")          = Status(i)
           iProperties.InstanceValue(name_shaz(i), "PTY_0 Objektcode")      = "tl03"
           iProperties.InstanceValue(name_shaz(i), "PTY_0 DIDOK")           = "HIGT"
@@ -309,7 +266,7 @@ Class placePartsOnSKLT
     Logger.Info("Finished.")
   End Sub
   
-  ' Funktion zur Auswahl der auszuführenden Aktion und zur Eingabe von n_max
+  ' Function for selecting the action to be executed and for entering n_max
   Function SelectFDKType(defaultMax As Integer) As Tuple(Of String, Integer)
     Dim validFilterValues As String() = {"Bitte eine Auswahl treffen", "Ausleger", "Spurhalter", "Spurhalterabzug", "Alle"}
     Dim form As New System.Windows.Forms.Form
@@ -367,4 +324,53 @@ Class placePartsOnSKLT
 
     Return Nothing
   End Function
+  
+  Sub ImportData(n_max As Integer)
+    x_red = GoExcel.CellValue("3rd Party:data", "data", "T" & 1)
+    y_red = GoExcel.CellValue("3rd Party:data", "data", "U" & 1)
+    z_red = GoExcel.CellValue("3rd Party:data", "data", "V" & 1)
+
+    For i = n_min - 1 To n_max - 1
+        nr(i)     =  GoExcel.CellValue("3rd Party:data", "data", "C"  & i + r)              'Nr
+        typ(i)    =  GoExcel.CellValue("3rd Party:data", "data", "E"  & i + r)              'Typ
+        hf(i)     =  GoExcel.CellValue("3rd Party:data", "data", "F"  & i + r)              'Höhe zwischen Fahrdraht und Gleis
+        hp(i)     =  GoExcel.CellValue("3rd Party:data", "data", "G"  & i + r)              'Höhe zwischen Tragseil und Gleis
+        ht(i)     =  GoExcel.CellValue("3rd Party:data", "data", "H"  & i + r)              'Höhe zwischen Tragrohrachse und Gleis
+        alr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "J"  & i + r)              'Abstand zwischen Gleisachse und Befestigung
+        α(i)      =  GoExcel.CellValue("3rd Party:data", "data", "M"  & i + r)              'Neigung Gleisachse
+        δ(i)      =  GoExcel.CellValue("3rd Party:data", "data", "N"  & i + r)              'Versatz Gleisachse
+        ε(i)      =  GoExcel.CellValue("3rd Party:data", "data", "O"  & i + r)              'Versatz Fahrzeugachse
+        xe(i)     = (GoExcel.CellValue("3rd Party:data", "data", "T"  & i + r) - x_red) * f 'X(E)-Achse Fundament
+        yn(i)     = (GoExcel.CellValue("3rd Party:data", "data", "U"  & i + r) - y_red) * f 'Y(N)-Achse Fundament
+        zz(i)     = (GoExcel.CellValue("3rd Party:data", "data", "V"  & i + r) - z_red) * f 'Z(Z)-Achse Fundament
+        xd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "W"  & i + r) - x_red) * f 'X(E)-Achse Ausrichtung
+        yd(i)     = (GoExcel.CellValue("3rd Party:data", "data", "X"  & i + r) - y_red) * f 'Y(N)-Achse Ausrichtung
+        switch(i) =  GoExcel.CellValue("3rd Party:data", "data", "Y"  & i + r)              'Switch bks and dir
+        lmr(i)    =  GoExcel.CellValue("3rd Party:data", "data", "Z"  & i + r)              'Befestigung Fahrdraht Links, Mitte oder Rechts der Gleisachse
+        shift(i)  =  GoExcel.CellValue("3rd Party:data", "data", "AA" & i + r)              'Position Ausrichtung Tragwerk schieben (innen <> aussen)
+        KM(i)     = GoExcel.CellValue("3rd Party:data", "data", "AG" & i + r)				'Kilometrierung
+        Status(i) = GoExcel.CellValue("3rd Party:data", "data", "AJ" & i + r)				'Status: Neu, Abbruch, Bestand, Referenz (Bestand - Abbruch) 
+
+        If (switch(i) = "true") Then 'Switch bks and dir
+            tempX(i) = xd(i)
+            tempY(i) = yd(i)
+            xd(i) = xe(i)
+            yd(i) = yn(i)
+            xe(i) = tempX(i)
+            yn(i) = tempY(i)
+        End If
+
+        If (Status(i) = "Bestand") Then
+            stat(i) = "B"
+        ElseIf (Status(i) = "Abbruch") Then
+            stat(i) = "A"
+        ElseIf (Status(i) = "Neu") Then
+            stat(i) = "N"
+        Else
+            stat(i) = "nicht definiert"
+        End If
+    Next
+    Logger.Info("Done setup.")
+End Sub
+	
 End Class
